@@ -13,8 +13,15 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
 
-// App state
-let appMode = localStorage.getItem("appMode") || "local"; // 'local' or 'cloud'
+// App state & Localhost detection
+const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+let appMode = localStorage.getItem("appMode");
+if (!appMode) {
+    appMode = isLocalhost ? "local" : "cloud";
+}
+if (!isLocalhost) {
+    appMode = "cloud";
+}
 let allCompanies = [];
 let selectedCompany = null;
 let companyWorkers = [];
@@ -83,6 +90,12 @@ function applyModeUI() {
     // Toggle active buttons in sidebar
     document.getElementById("btn-mode-local").classList.toggle("active", !isCloud);
     document.getElementById("btn-mode-cloud").classList.toggle("active", isCloud);
+
+    // Hide switcher in production domains
+    const switcher = document.querySelector(".mode-switcher-container");
+    if (switcher) {
+        switcher.style.display = isLocalhost ? "flex" : "none";
+    }
 
     // Update status bar
     const dot = document.getElementById("status-dot");
