@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RemuGest - Portal de Gestión</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="index.css">
+    
+    <!-- Firebase SDKs (Compat version for ES5/vanilla JS compatibility) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+</head>
+<body class="dark-theme">
+
+    <!-- Firebase Auth Login Screen Overlay -->
+    <div id="login-overlay" class="login-overlay">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="logo-icon"></div>
+                <h2>Remu<span>Gest</span> Cloud</h2>
+            </div>
+            <p class="login-subtitle">Ingresa a tu cuenta de Firebase Auth para administrar en la nube.</p>
+            
+            <form id="login-form" onsubmit="handleFirebaseLogin(event)" class="premium-form">
+                <div class="form-group">
+                    <label for="login-email">Correo Electrónico</label>
+                    <input type="text" id="login-email" placeholder="ejemplo@remugest.cl" required>
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Contraseña</label>
+                    <input type="password" id="login-password" placeholder="••••••••" required>
+                </div>
+                <div id="login-error-msg" class="text-danger text-center" style="font-size: 13px; display: none;"></div>
+                <button type="submit" class="btn btn-primary">Iniciar Sesión</button>
+            </form>
+            
+            <div class="login-footer">
+                <p>¿Prefieres trabajar localmente?</p>
+                <button onclick="setMode('local')" class="btn-link">⚙️ Cambiar a Modo Local (Access MDB)</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="logo-area">
+                <div class="logo-icon"></div>
+                <h2>Remu<span>Gest</span></h2>
+            </div>
+            <nav class="nav-menu">
+                <button class="nav-item active" id="tab-dashboard" onclick="switchTab('dashboard')">
+                    <span class="icon">📊</span> Panel Principal
+                </button>
+                <button class="nav-item" id="tab-empresas" onclick="switchTab('empresas')">
+                    <span class="icon">🏢</span> Empresas
+                </button>
+                <button class="nav-item" id="tab-personal" onclick="switchTab('personal')">
+                    <span class="icon">👥</span> Fichas Personal
+                </button>
+                <button class="nav-item" id="tab-admin" onclick="switchTab('admin')">
+                    <span class="icon">🔐</span> Acceso & Usuarios
+                </button>
+                <button class="nav-item" id="tab-params" onclick="switchTab('params')">
+                    <span class="icon">⚙️</span> Parámetros
+                </button>
+            </nav>
+            <div class="sidebar-footer">
+                <!-- Mode Switcher -->
+                <div class="mode-switcher-container">
+                    <label>Modo de Trabajo:</label>
+                    <div class="mode-buttons">
+                        <button id="btn-mode-local" onclick="setMode('local')" class="mode-btn active">Local</button>
+                        <button id="btn-mode-cloud" onclick="setMode('cloud')" class="mode-btn">Nube</button>
+                    </div>
+                </div>
+
+                <div class="status-indicator">
+                    <span class="dot online" id="status-dot"></span>
+                    <span id="status-text">Servidor Local Conectado</span>
+                </div>
+                <div class="version-badge" id="version-text">v1.2 (Local/Cloud Sync)</div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <header class="top-header">
+                <div class="header-search">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="global-search" placeholder="Buscar trabajador, RUT, empresa..." oninput="handleGlobalSearch()">
+                </div>
+                <div class="header-profile">
+                    <div class="profile-info">
+                        <span class="profile-name" id="user-display-name">Administrador Local</span>
+                        <span class="profile-role" id="user-display-role">Control Total</span>
+                    </div>
+                    <div class="avatar" id="user-avatar-text">AL</div>
+                    <button id="btn-logout" class="btn btn-danger" style="display: none; margin-left: 10px; padding: 6px 12px; font-size: 11px;" onclick="handleFirebaseLogout()">Cerrar Sesión</button>
+                </div>
+            </header>
+
+            <div class="content-body">
+                <!-- Tab: Dashboard -->
+                <section id="sec-dashboard" class="tab-section active">
+                    <div class="welcome-banner">
+                        <div class="welcome-text">
+                            <h1>¡Bienvenido a RemuGest!</h1>
+                            <p>Esta es tu interfaz web modernizada para administrar localmente el sistema de remuneraciones y contabilidad de forma libre, privada y optimizada. Ahora con **soporte completo de escritura** (crear/editar trabajadores y empresas).</p>
+                        </div>
+                        <div class="welcome-illustration">🏢</div>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon companies-icon">🏢</div>
+                            <div class="stat-content">
+                                <span class="stat-label">Empresas Registradas</span>
+                                <h3 id="stat-companies-count">-</h3>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon workers-icon">👥</div>
+                            <div class="stat-content">
+                                <span class="stat-label">Trabajadores Activos</span>
+                                <h3 id="stat-workers-count">-</h3>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon db-icon">🔑</div>
+                            <div class="stat-content">
+                                <span class="stat-label">Usuarios del Sistema</span>
+                                <h3 id="stat-users-count">-</h3>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-layout">
+                        <!-- Sync box: visible only locally -->
+                        <div class="dashboard-card" id="sync-card" style="margin-bottom: 24px;">
+                            <div class="card-header">
+                                <h3>☁️ Sincronización con la Nube (Firebase)</h3>
+                                <p>Sube toda la información de tus bases de datos locales (.mdb) a Firestore con un solo clic.</p>
+                            </div>
+                            <div class="card-body">
+                                <div class="sync-actions">
+                                    <button class="btn btn-primary" onclick="migrateLocalToFirebase()">☁️ Iniciar Migración a Firebase</button>
+                                </div>
+                                <div id="sync-progress-area" style="display: none; margin-top: 15px;">
+                                    <div class="progress-bar-container">
+                                        <div id="sync-progress-bar" class="progress-bar"></div>
+                                    </div>
+                                    <p id="sync-status-msg" style="font-size: 13px; margin-top: 5px; color: var(--text-muted);"></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="dashboard-card main-card">
+                            <div class="card-header flex-header">
+                                <div>
+                                    <h3>Acceso Rápido a Empresas</h3>
+                                    <p>Selecciona una empresa para gestionar sus trabajadores.</p>
+                                </div>
+                                <button class="btn btn-primary" onclick="openAddCompanyModal()">➕ Registrar Nueva Empresa</button>
+                            </div>
+                            <div class="card-body">
+                                <div id="quick-companies-list" class="quick-grid">
+                                    <div class="loading-spinner">Cargando empresas...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Tab: Empresas -->
+                <section id="sec-empresas" class="tab-section">
+                    <div class="section-header flex-header">
+                        <div>
+                            <h2>🏢 Directorio de Empresas</h2>
+                            <p>Gestión de razones sociales declaradas en la carpeta de remuneraciones.</p>
+                        </div>
+                        <button class="btn btn-primary" onclick="openAddCompanyModal()">➕ Registrar Nueva Empresa</button>
+                    </div>
+                    <div class="grid-layout" id="companies-full-list">
+                        <div class="loading-spinner">Cargando empresas...</div>
+                    </div>
+                </section>
+
+                <!-- Tab: Personal -->
+                <section id="sec-personal" class="tab-section">
+                    <div class="section-header flex-header">
+                        <div>
+                            <h2>👥 Fichas de Trabajadores Activos</h2>
+                            <p id="selected-company-subtitle">Selecciona una empresa para ver su personal</p>
+                        </div>
+                        <div class="header-actions">
+                            <button class="btn btn-primary" id="btn-add-worker" style="display: none; margin-right: 15px;" onclick="openAddWorkerModal()">➕ Agregar Nuevo Trabajador</button>
+                            <div class="company-selector-wrapper">
+                                <label for="company-select">Empresa:</label>
+                                <select id="company-select" onchange="loadWorkersForSelect(this.value)">
+                                    <option value="">-- Selecciona Empresa --</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-container card-shadow">
+                        <table class="premium-table">
+                            <thead>
+                                <tr>
+                                    <th>RUT / RUN</th>
+                                    <th>Nombre Completo</th>
+                                    <th>Cargo u Ocupación</th>
+                                    <th>Sueldo Base</th>
+                                    <th>AFP</th>
+                                    <th>Salud (Isapre)</th>
+                                    <th>Email</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="workers-table-body">
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted">Selecciona una empresa para cargar la planilla de personal.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Tab: Administradores (Key.mdb / Firebase Users) -->
+                <section id="sec-admin" class="tab-section">
+                    <div class="section-header">
+                        <h2>🔐 Control de Usuarios y Licencias</h2>
+                        <p id="admin-subtitle">Gestión directa de usuarios administradores guardados en la base de datos.</p>
+                    </div>
+
+                    <div class="grid-two-cols">
+                        <!-- Left: List of Users -->
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <h3>Usuarios Registrados</h3>
+                                <p>Cuentas de usuario configuradas para el acceso.</p>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-container">
+                                    <table class="premium-table simple-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Código / Email</th>
+                                                <th>Nombre</th>
+                                                <th id="th-clave">Clave</th>
+                                                <th>Rol</th>
+                                                <th>Acción</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="users-table-body">
+                                            <tr>
+                                                <td colspan="5" class="text-center">Cargando usuarios...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right: Add User Form -->
+                        <div class="dashboard-card" id="card-add-user">
+                            <div class="card-header">
+                                <h3>Agregar Nuevo Usuario</h3>
+                                <p>Crea una nueva cuenta de administrador para el software.</p>
+                            </div>
+                            <div class="card-body">
+                                <form id="add-user-form" onsubmit="createUser(event)" class="premium-form">
+                                    <div class="form-group">
+                                        <label for="user-code" id="lbl-user-code">Código de Usuario</label>
+                                        <input type="text" id="user-code" placeholder="Ej: AdminJuan" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="user-name">Nombre Completo</label>
+                                        <input type="text" id="user-name" placeholder="Ej: Juan Pérez" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="user-pass" id="lbl-user-pass">Contraseña (Clave)</label>
+                                        <input type="text" id="user-pass" placeholder="Ej: MiClave123" required>
+                                    </div>
+                                    <div class="form-group row-group" id="group-user-admin">
+                                        <input type="checkbox" id="user-admin" checked>
+                                        <label for="user-admin">Otorgar permisos de Administrador</label>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary" id="btn-submit-user">Registrar Usuario</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Tab: Parameters (NT_Main.mdb / Firebase Params) -->
+                <section id="sec-params" class="tab-section">
+                    <div class="section-header">
+                        <h2>⚙️ Parámetros del Sistema</h2>
+                        <p>Tablas globales del sistema cargadas desde la base de datos.</p>
+                    </div>
+
+                    <div class="grid-two-cols">
+                        <!-- Left: Global parameters -->
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <h3>Parámetros Tributarios y Previsionales</h3>
+                                <p>Topes de APV, Asignaciones Familiares e Impuestos.</p>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-container max-height-table">
+                                    <table class="premium-table simple-table">
+                                        <thead>
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Clave Parámetro</th>
+                                                <th>Valor</th>
+                                                <th>Descripción</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="params-table-body">
+                                            <tr>
+                                                <td colspan="4" class="text-center">Cargando parámetros...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right: Communes and Regions -->
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <h3>Comunas Registradas en Chile</h3>
+                                <p>Códigos del INE y Comunas para Previred.</p>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-container max-height-table">
+                                    <table class="premium-table simple-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Código</th>
+                                                <th>Nombre Comuna</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="comunas-table-body">
+                                            <tr>
+                                                <td colspan="2" class="text-center">Cargando comunas...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal: View Employee Details / History -->
+    <div id="worker-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="modal-worker-title">Ficha e Historial de Liquidaciones</h3>
+                <button class="modal-close" onclick="closeWorkerModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="worker-overview">
+                    <div class="worker-avatar">👤</div>
+                    <div class="worker-details-grid">
+                        <div><strong>RUT:</strong> <span id="w-rut">-</span></div>
+                        <div><strong>Cargo:</strong> <span id="w-ocupac">-</span></div>
+                        <div><strong>Sueldo Base:</strong> <span id="w-sbase">-</span></div>
+                        <div><strong>Previsión (AFP):</strong> <span id="w-afp">-</span></div>
+                        <div><strong>Salud (Isapre):</strong> <span id="w-isa">-</span></div>
+                        <div><strong>Email:</strong> <span id="w-email">-</span></div>
+                    </div>
+                </div>
+
+                <hr class="modal-divider">
+
+                <h4>Historial de Liquidaciones por Mes</h4>
+                <div class="table-container">
+                    <table class="premium-table compact-table">
+                        <thead>
+                            <tr>
+                                <th>Mes</th>
+                                <th>Días Trab.</th>
+                                <th>Total Haberes</th>
+                                <th>Descuentos</th>
+                                <th>Líquido a Pago</th>
+                                <th>AFP Monto</th>
+                                <th>Isapre Monto</th>
+                            </tr>
+                        </thead>
+                        <tbody id="w-history-table-body">
+                            <tr>
+                                <td colspan="7" class="text-center">Cargando historial...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Add / Edit Company -->
+    <div id="company-form-modal" class="modal-overlay">
+        <div class="modal-card max-width-600">
+            <div class="modal-header">
+                <h3 id="company-modal-title">Registrar Nueva Empresa</h3>
+                <button class="modal-close" onclick="closeCompanyModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="company-form" onsubmit="saveCompany(event)" class="premium-form">
+                    <input type="hidden" id="company-mode" value="add"> <!-- add or edit -->
+                    
+                    <div class="form-group" id="group-dirname">
+                        <label for="comp-dirname">Nombre del Identificador Único (Sin caracteres especiales)</label>
+                        <input type="text" id="comp-dirname" placeholder="Ej: MI_EMPRESA_LTDA_2026" required>
+                        <small style="color: var(--text-muted); font-size: 11px;" id="dirname-desc">Esto creará una carpeta física en el servidor y su respectiva base de datos.</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="comp-empres">Razón Social de la Empresa</label>
+                        <input type="text" id="comp-empres" placeholder="Ej: Mi Empresa Limitada" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="comp-rolemp">RUT Empresa (Rol Único Tributario)</label>
+                        <input type="text" id="comp-rolemp" placeholder="Ej: 77.666.555-4" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="comp-giro">Giro Comercial</label>
+                        <input type="text" id="comp-giro" placeholder="Ej: Servicios de Limpieza y Construcción">
+                    </div>
+                    
+                    <div class="grid-form-two-cols">
+                        <div class="form-group">
+                            <label for="comp-direcc">Dirección Principal</label>
+                            <input type="text" id="comp-direcc" placeholder="Ej: Av. Alameda 1020">
+                        </div>
+                        <div class="form-group">
+                            <label for="comp-comuna">Comuna</label>
+                            <input type="text" id="comp-comuna" placeholder="Ej: Santiago">
+                        </div>
+                    </div>
+                    
+                    <div class="grid-form-two-cols">
+                        <div class="form-group">
+                            <label for="comp-repres">Nombre del Representante Legal</label>
+                            <input type="text" id="comp-repres" placeholder="Ej: Juan Pérez">
+                        </div>
+                        <div class="form-group">
+                            <label for="comp-rolrep">RUT del Representante</label>
+                            <input type="text" id="comp-rolrep" placeholder="Ej: 12.345.678-9">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" id="btn-save-company">Registrar Empresa</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Add / Edit Worker -->
+    <div id="worker-form-modal" class="modal-overlay">
+        <div class="modal-card max-width-600">
+            <div class="modal-header">
+                <h3 id="worker-form-title">Agregar Nuevo Trabajador</h3>
+                <button class="modal-close" onclick="closeWorkerFormModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="worker-form" onsubmit="saveWorker(event)" class="premium-form">
+                    <input type="hidden" id="worker-mode" value="add"> <!-- add or edit -->
+                    
+                    <div class="grid-form-two-cols">
+                        <div class="form-group" id="group-worker-rut">
+                            <label for="work-rut">RUT Trabajador (RUN)</label>
+                            <input type="text" id="work-rut" placeholder="Ej: 12.345.678-9" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="work-sexo">Sexo / Género</label>
+                            <select id="work-sexo" class="premium-select">
+                                <option value="Masculino">Masculino</option>
+                                <option value="Femenino">Femenino</option>
+                                <option value="-">No especifica</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="work-nombre">Nombres</label>
+                        <input type="text" id="work-nombre" placeholder="Ej: Juan Andrés" required>
+                    </div>
+                    
+                    <div class="grid-form-two-cols">
+                        <div class="form-group">
+                            <label for="work-paterno">Apellido Paterno</label>
+                            <input type="text" id="work-paterno" placeholder="Ej: Pérez" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="work-materno">Apellido Materno</label>
+                            <input type="text" id="work-materno" placeholder="Ej: Muñoz">
+                        </div>
+                    </div>
+
+                    <div class="grid-form-two-cols">
+                        <div class="form-group">
+                            <label for="work-ocupac">Cargo u Ocupación</label>
+                            <input type="text" id="work-ocupac" placeholder="Ej: Auxiliar de Aseo">
+                        </div>
+                        <div class="form-group">
+                            <label for="work-sbase">Sueldo Base Mensual (CLP)</label>
+                            <input type="text" id="work-sbase" placeholder="Ej: 460000" required>
+                        </div>
+                    </div>
+
+                    <div class="grid-form-two-cols">
+                        <div class="form-group">
+                            <label for="work-afp">Administradora de Pensión (AFP)</label>
+                            <select id="work-afp" class="premium-select">
+                                <option value="FONASA">SIN AFP (Pensionado / IPS)</option>
+                                <option value="Habitat">Habitat</option>
+                                <option value="Provida">Provida</option>
+                                <option value="Capital">Capital</option>
+                                <option value="Cuprum">Cuprum</option>
+                                <option value="PlanVital">PlanVital</option>
+                                <option value="Modelo">Modelo</option>
+                                <option value="Uno">Uno</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="work-isa">Previsión de Salud (Isapre/FONASA)</label>
+                            <select id="work-isa" class="premium-select">
+                                <option value="Fonasa">FONASA</option>
+                                <option value="Banmédica">Banmédica</option>
+                                <option value="Colmena">Colmena Golden Cross</option>
+                                <option value="Consalud">Consalud</option>
+                                <option value="Cruz Blanca">Cruz Blanca</option>
+                                <option value="Nueva Masvida">Nueva Masvida</option>
+                                <option value="Vida Tres">Vida Tres</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="work-direcc">Dirección Particular</label>
+                        <input type="text" id="work-direcc" placeholder="Ej: Pasaje Las Lilas 450, Antofagasta">
+                    </div>
+
+                    <div class="grid-form-two-cols">
+                        <div class="form-group">
+                            <label for="work-email">Correo Electrónico</label>
+                            <input type="text" id="work-email" placeholder="Ej: juan.perez@gmail.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="work-nacionalidad">Nacionalidad</label>
+                            <input type="text" id="work-nacionalidad" placeholder="Ej: CHILENA" value="CHILENA">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" id="btn-save-worker">Guardar Trabajador</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="index.js"></script>
+</body>
+</html>
