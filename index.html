@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RemuGest - Portal de Gestión</title>
+    <title>RemuGest - Portal de Gestión de Remuneraciones</title>
+    <meta name="description" content="Sistema de gestión de remuneraciones y contabilidad. Administra empresas, trabajadores y liquidaciones de sueldo.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="index.css">
-    
-    <!-- Firebase SDKs (Compat version for ES5/vanilla JS compatibility) -->
+
+    <!-- Firebase SDKs (Compat) -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
@@ -28,14 +29,14 @@
             <form id="login-form" onsubmit="handleFirebaseLogin(event)" class="premium-form">
                 <div class="form-group">
                     <label for="login-email">Correo Electrónico</label>
-                    <input type="text" id="login-email" placeholder="ejemplo@remugest.cl" required>
+                    <input type="email" id="login-email" placeholder="ejemplo@remugest.cl" required>
                 </div>
                 <div class="form-group">
                     <label for="login-password">Contraseña</label>
                     <input type="password" id="login-password" placeholder="••••••••" required>
                 </div>
-                <div id="login-error-msg" class="text-danger text-center" style="font-size: 13px; display: none;"></div>
-                <button type="submit" class="btn btn-primary">Iniciar Sesión</button>
+                <div id="login-error-msg" class="text-danger text-center" style="font-size:13px; display:none;"></div>
+                <button type="submit" class="btn btn-primary" id="btn-login-submit">Iniciar Sesión</button>
             </form>
             
             <div class="login-footer">
@@ -44,6 +45,9 @@
             </div>
         </div>
     </div>
+
+    <!-- Print Area (hidden, only shows on print) -->
+    <div id="print-area" style="display:none;"></div>
 
     <div class="app-container">
         <!-- Sidebar Navigation -->
@@ -62,8 +66,11 @@
                 <button class="nav-item" id="tab-personal" onclick="switchTab('personal')">
                     <span class="icon">👥</span> Fichas Personal
                 </button>
+                <button class="nav-item" id="tab-liquidaciones" onclick="switchTab('liquidaciones')">
+                    <span class="icon">📄</span> Liquidaciones
+                </button>
                 <button class="nav-item" id="tab-admin" onclick="switchTab('admin')">
-                    <span class="icon">🔐</span> Acceso & Usuarios
+                    <span class="icon">🔐</span> Acceso &amp; Usuarios
                 </button>
                 <button class="nav-item" id="tab-params" onclick="switchTab('params')">
                     <span class="icon">⚙️</span> Parámetros
@@ -71,19 +78,18 @@
             </nav>
             <div class="sidebar-footer">
                 <!-- Mode Switcher -->
-                <div class="mode-switcher-container">
+                <div class="mode-switcher-container" id="mode-switcher-wrapper">
                     <label>Modo de Trabajo:</label>
                     <div class="mode-buttons">
                         <button id="btn-mode-local" onclick="setMode('local')" class="mode-btn active">Local</button>
                         <button id="btn-mode-cloud" onclick="setMode('cloud')" class="mode-btn">Nube</button>
                     </div>
                 </div>
-
                 <div class="status-indicator">
                     <span class="dot online" id="status-dot"></span>
                     <span id="status-text">Servidor Local Conectado</span>
                 </div>
-                <div class="version-badge" id="version-text">v1.2 (Local/Cloud Sync)</div>
+                <div class="version-badge" id="version-text">v1.3 (Local/Cloud)</div>
             </div>
         </aside>
 
@@ -100,17 +106,18 @@
                         <span class="profile-role" id="user-display-role">Control Total</span>
                     </div>
                     <div class="avatar" id="user-avatar-text">AL</div>
-                    <button id="btn-logout" class="btn btn-danger" style="display: none; margin-left: 10px; padding: 6px 12px; font-size: 11px;" onclick="handleFirebaseLogout()">Cerrar Sesión</button>
+                    <button id="btn-logout" class="btn btn-danger" style="display:none; padding:6px 12px; font-size:11px;" onclick="handleFirebaseLogout()">Cerrar Sesión</button>
                 </div>
             </header>
 
             <div class="content-body">
-                <!-- Tab: Dashboard -->
+
+                <!-- ════════════ TAB: DASHBOARD ════════════ -->
                 <section id="sec-dashboard" class="tab-section active">
                     <div class="welcome-banner">
                         <div class="welcome-text">
                             <h1>¡Bienvenido a RemuGest!</h1>
-                            <p>Esta es tu interfaz web modernizada para administrar localmente el sistema de remuneraciones y contabilidad de forma libre, privada y optimizada. Ahora con **soporte completo de escritura** (crear/editar trabajadores y empresas).</p>
+                            <p>Tu plataforma de administración de remuneraciones modernizada. Gestiona empresas, trabajadores y genera liquidaciones de sueldo con cálculos automáticos según la legislación chilena.</p>
                         </div>
                         <div class="welcome-illustration">🏢</div>
                     </div>
@@ -140,8 +147,8 @@
                     </div>
 
                     <div class="dashboard-layout">
-                        <!-- Sync box: visible only locally -->
-                        <div class="dashboard-card" id="sync-card" style="margin-bottom: 24px;">
+                        <!-- Sync card: visible only locally -->
+                        <div class="dashboard-card" id="sync-card" style="margin-bottom: 0;">
                             <div class="card-header">
                                 <h3>☁️ Sincronización con la Nube (Firebase)</h3>
                                 <p>Sube toda la información de tus bases de datos locales (.mdb) a Firestore con un solo clic.</p>
@@ -150,11 +157,11 @@
                                 <div class="sync-actions">
                                     <button class="btn btn-primary" onclick="migrateLocalToFirebase()">☁️ Iniciar Migración a Firebase</button>
                                 </div>
-                                <div id="sync-progress-area" style="display: none; margin-top: 15px;">
+                                <div id="sync-progress-area" style="display:none; margin-top:15px;">
                                     <div class="progress-bar-container">
                                         <div id="sync-progress-bar" class="progress-bar"></div>
                                     </div>
-                                    <p id="sync-status-msg" style="font-size: 13px; margin-top: 5px; color: var(--text-muted);"></p>
+                                    <p id="sync-status-msg" style="font-size:13px; margin-top:5px; color:var(--text-muted);"></p>
                                 </div>
                             </div>
                         </div>
@@ -176,12 +183,12 @@
                     </div>
                 </section>
 
-                <!-- Tab: Empresas -->
+                <!-- ════════════ TAB: EMPRESAS ════════════ -->
                 <section id="sec-empresas" class="tab-section">
                     <div class="section-header flex-header">
                         <div>
                             <h2>🏢 Directorio de Empresas</h2>
-                            <p>Gestión de razones sociales declaradas en la carpeta de remuneraciones.</p>
+                            <p>Gestión de razones sociales, representantes y datos de contacto.</p>
                         </div>
                         <button class="btn btn-primary" onclick="openAddCompanyModal()">➕ Registrar Nueva Empresa</button>
                     </div>
@@ -190,7 +197,7 @@
                     </div>
                 </section>
 
-                <!-- Tab: Personal -->
+                <!-- ════════════ TAB: PERSONAL ════════════ -->
                 <section id="sec-personal" class="tab-section">
                     <div class="section-header flex-header">
                         <div>
@@ -198,7 +205,7 @@
                             <p id="selected-company-subtitle">Selecciona una empresa para ver su personal</p>
                         </div>
                         <div class="header-actions">
-                            <button class="btn btn-primary" id="btn-add-worker" style="display: none; margin-right: 15px;" onclick="openAddWorkerModal()">➕ Agregar Nuevo Trabajador</button>
+                            <button class="btn btn-primary" id="btn-add-worker" style="display:none;" onclick="openAddWorkerModal()">➕ Agregar Nuevo Trabajador</button>
                             <div class="company-selector-wrapper">
                                 <label for="company-select">Empresa:</label>
                                 <select id="company-select" onchange="loadWorkersForSelect(this.value)">
@@ -214,11 +221,11 @@
                                 <tr>
                                     <th>RUT / RUN</th>
                                     <th>Nombre Completo</th>
-                                    <th>Cargo u Ocupación</th>
+                                    <th>Cargo / Depto.</th>
+                                    <th>Tipo Contrato</th>
                                     <th>Sueldo Base</th>
                                     <th>AFP</th>
-                                    <th>Salud (Isapre)</th>
-                                    <th>Email</th>
+                                    <th>Salud</th>
                                     <th>Acciones</th>
                                 </tr>
                             </thead>
@@ -231,7 +238,120 @@
                     </div>
                 </section>
 
-                <!-- Tab: Administradores (Key.mdb / Firebase Users) -->
+                <!-- ════════════ TAB: LIQUIDACIONES ════════════ -->
+                <section id="sec-liquidaciones" class="tab-section">
+                    <div class="section-header">
+                        <h2>📄 Generador de Liquidaciones de Sueldo</h2>
+                        <p>Calcula y genera liquidaciones según la legislación laboral chilena vigente.</p>
+                    </div>
+
+                    <div class="liquidacion-controls">
+                        <div class="form-group">
+                            <label for="liq-empresa-select">Empresa</label>
+                            <select id="liq-empresa-select" class="premium-select" onchange="onLiqEmpresaChange()">
+                                <option value="">-- Selecciona empresa --</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="liq-worker-select">Trabajador</label>
+                            <select id="liq-worker-select" class="premium-select" onchange="onLiqWorkerChange()">
+                                <option value="">-- Selecciona trabajador --</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="liq-mes">Mes</label>
+                            <select id="liq-mes" class="premium-select">
+                                <option value="ENE">Enero</option>
+                                <option value="FEB">Febrero</option>
+                                <option value="MAR">Marzo</option>
+                                <option value="ABR">Abril</option>
+                                <option value="MAY">Mayo</option>
+                                <option value="JUN" selected>Junio</option>
+                                <option value="JUL">Julio</option>
+                                <option value="AGO">Agosto</option>
+                                <option value="SEP">Septiembre</option>
+                                <option value="OCT">Octubre</option>
+                                <option value="NOV">Noviembre</option>
+                                <option value="DIC">Diciembre</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="liq-anio">Año</label>
+                            <input type="number" id="liq-anio" value="2025" min="2020" max="2030" style="width:100px;">
+                        </div>
+                        <div class="form-group">
+                            <label for="liq-dias">Días Trabajados</label>
+                            <input type="number" id="liq-dias" value="30" min="1" max="31" style="width:90px;">
+                        </div>
+                        <div style="display:flex; gap:8px; align-items:flex-end;">
+                            <button class="btn btn-primary" onclick="generateLiquidacion()">🧮 Generar</button>
+                        </div>
+                    </div>
+
+                    <!-- Extra haberes (bonos) -->
+                    <div class="dashboard-card" id="liq-extras-card" style="margin-bottom:20px; display:none;">
+                        <div class="card-header">
+                            <h3>➕ Haberes Adicionales</h3>
+                            <p>Agrega bonos y asignaciones extra para este período.</p>
+                        </div>
+                        <div class="card-body">
+                            <div class="grid-form-three-cols" style="align-items:end;">
+                                <div class="form-group">
+                                    <label>Horas Extra 50% (hrs)</label>
+                                    <input type="number" id="liq-horas-50" value="0" min="0">
+                                </div>
+                                <div class="form-group">
+                                    <label>Horas Extra 100% (hrs)</label>
+                                    <input type="number" id="liq-horas-100" value="0" min="0">
+                                </div>
+                                <div class="form-group">
+                                    <label>Colación ($ CLP)</label>
+                                    <input type="number" id="liq-colacion" value="0" min="0">
+                                </div>
+                                <div class="form-group">
+                                    <label>Movilización ($ CLP)</label>
+                                    <input type="number" id="liq-movilizacion" value="0" min="0">
+                                </div>
+                                <div class="form-group">
+                                    <label>Bono Imponible ($ CLP)</label>
+                                    <input type="number" id="liq-bono-imp" value="0" min="0">
+                                </div>
+                                <div class="form-group">
+                                    <label>Bono No Imponible ($ CLP)</label>
+                                    <input type="number" id="liq-bono-noimpo" value="0" min="0">
+                                </div>
+                                <div class="form-group">
+                                    <label>Gratificación</label>
+                                    <select id="liq-gratif-tipo" class="premium-select">
+                                        <option value="garantizada">Garantizada (25% SB)</option>
+                                        <option value="proporcional">Proporcional</option>
+                                        <option value="no">No aplica</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Asig. Familiar (cargas)</label>
+                                    <input type="number" id="liq-cargas" value="0" min="0">
+                                </div>
+                                <div class="form-group">
+                                    <label>Días Ausencia (desc.)</label>
+                                    <input type="number" id="liq-dias-aus" value="0" min="0">
+                                </div>
+                            </div>
+                            <div style="margin-top:12px;">
+                                <button class="btn btn-primary" onclick="generateLiquidacion()">🔄 Recalcular</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="liquidacion-preview" id="liq-preview-area">
+                        <div class="liq-empty-state">
+                            <div class="icon">📋</div>
+                            <p>Selecciona empresa, trabajador y período para generar la liquidación.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ════════════ TAB: ADMINISTRADORES ════════════ -->
                 <section id="sec-admin" class="tab-section">
                     <div class="section-header">
                         <h2>🔐 Control de Usuarios y Licencias</h2>
@@ -239,7 +359,6 @@
                     </div>
 
                     <div class="grid-two-cols">
-                        <!-- Left: List of Users -->
                         <div class="dashboard-card">
                             <div class="card-header">
                                 <h3>Usuarios Registrados</h3>
@@ -258,16 +377,13 @@
                                             </tr>
                                         </thead>
                                         <tbody id="users-table-body">
-                                            <tr>
-                                                <td colspan="5" class="text-center">Cargando usuarios...</td>
-                                            </tr>
+                                            <tr><td colspan="5" class="text-center">Cargando usuarios...</td></tr>
                                         </tbody>
                                     </table>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Right: Add User Form -->
                         <div class="dashboard-card" id="card-add-user">
                             <div class="card-header">
                                 <h3>Agregar Nuevo Usuario</h3>
@@ -298,7 +414,7 @@
                     </div>
                 </section>
 
-                <!-- Tab: Parameters (NT_Main.mdb / Firebase Params) -->
+                <!-- ════════════ TAB: PARÁMETROS ════════════ -->
                 <section id="sec-params" class="tab-section">
                     <div class="section-header">
                         <h2>⚙️ Parámetros del Sistema</h2>
@@ -306,7 +422,6 @@
                     </div>
 
                     <div class="grid-two-cols">
-                        <!-- Left: Global parameters -->
                         <div class="dashboard-card">
                             <div class="card-header">
                                 <h3>Parámetros Tributarios y Previsionales</h3>
@@ -324,16 +439,13 @@
                                             </tr>
                                         </thead>
                                         <tbody id="params-table-body">
-                                            <tr>
-                                                <td colspan="4" class="text-center">Cargando parámetros...</td>
-                                            </tr>
+                                            <tr><td colspan="4" class="text-center">Cargando parámetros...</td></tr>
                                         </tbody>
                                     </table>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Right: Communes and Regions -->
                         <div class="dashboard-card">
                             <div class="card-header">
                                 <h3>Comunas Registradas en Chile</h3>
@@ -349,9 +461,7 @@
                                             </tr>
                                         </thead>
                                         <tbody id="comunas-table-body">
-                                            <tr>
-                                                <td colspan="2" class="text-center">Cargando comunas...</td>
-                                            </tr>
+                                            <tr><td colspan="2" class="text-center">Cargando comunas...</td></tr>
                                         </tbody>
                                     </table>
                                 </div>
@@ -359,11 +469,14 @@
                         </div>
                     </div>
                 </section>
-            </div>
-        </main>
-    </div>
 
-    <!-- Modal: View Employee Details / History -->
+            </div><!-- /content-body -->
+        </main>
+    </div><!-- /app-container -->
+
+    <!-- ════════════════════════════════════
+         MODAL: Ver Historial Trabajador
+    ════════════════════════════════════ -->
     <div id="worker-modal" class="modal-overlay">
         <div class="modal-card">
             <div class="modal-header">
@@ -377,8 +490,10 @@
                         <div><strong>RUT:</strong> <span id="w-rut">-</span></div>
                         <div><strong>Cargo:</strong> <span id="w-ocupac">-</span></div>
                         <div><strong>Sueldo Base:</strong> <span id="w-sbase">-</span></div>
-                        <div><strong>Previsión (AFP):</strong> <span id="w-afp">-</span></div>
-                        <div><strong>Salud (Isapre):</strong> <span id="w-isa">-</span></div>
+                        <div><strong>AFP:</strong> <span id="w-afp">-</span></div>
+                        <div><strong>Salud:</strong> <span id="w-isa">-</span></div>
+                        <div><strong>Contrato:</strong> <span id="w-contrato">-</span></div>
+                        <div><strong>Ingreso:</strong> <span id="w-ingreso">-</span></div>
                         <div><strong>Email:</strong> <span id="w-email">-</span></div>
                     </div>
                 </div>
@@ -400,9 +515,7 @@
                             </tr>
                         </thead>
                         <tbody id="w-history-table-body">
-                            <tr>
-                                <td colspan="7" class="text-center">Cargando historial...</td>
-                            </tr>
+                            <tr><td colspan="7" class="text-center">Cargando historial...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -410,7 +523,9 @@
         </div>
     </div>
 
-    <!-- Modal: Add / Edit Company -->
+    <!-- ════════════════════════════════════
+         MODAL: Agregar / Editar Empresa
+    ════════════════════════════════════ -->
     <div id="company-form-modal" class="modal-overlay">
         <div class="modal-card max-width-600">
             <div class="modal-header">
@@ -419,27 +534,45 @@
             </div>
             <div class="modal-body">
                 <form id="company-form" onsubmit="saveCompany(event)" class="premium-form">
-                    <input type="hidden" id="company-mode" value="add"> <!-- add or edit -->
-                    
-                    <div class="form-group" id="group-dirname">
-                        <label for="comp-dirname">Nombre del Identificador Único (Sin caracteres especiales)</label>
-                        <input type="text" id="comp-dirname" placeholder="Ej: MI_EMPRESA_LTDA_2026" required>
-                        <small style="color: var(--text-muted); font-size: 11px;" id="dirname-desc">Esto creará una carpeta física en el servidor y su respectiva base de datos.</small>
+                    <input type="hidden" id="company-mode" value="add">
+
+                    <!-- Logo Upload -->
+                    <div class="form-group">
+                        <label>Logo de la Empresa</label>
+                        <div class="logo-upload-wrapper" onclick="document.getElementById('logo-file-input').click()">
+                            <div class="logo-preview-box" id="logo-preview-box">🏢</div>
+                            <div class="logo-upload-info">
+                                <p>Haz clic para subir el logo</p>
+                                <small>PNG, JPG hasta 500KB. Se guardará como Base64.</small>
+                            </div>
+                            <button type="button" class="logo-upload-btn">📁 Elegir</button>
+                        </div>
+                        <input type="file" id="logo-file-input" accept="image/*" style="display:none;" onchange="handleLogoUpload(event)">
+                        <input type="hidden" id="comp-logo" value="">
                     </div>
-                    
+
+                    <div class="form-group" id="group-dirname">
+                        <label for="comp-dirname">Identificador Único (Sin espacios ni caracteres especiales)</label>
+                        <input type="text" id="comp-dirname" placeholder="Ej: MI_EMPRESA_LTDA_2025" required>
+                        <small id="dirname-desc" style="color:var(--text-muted); font-size:11px;">Esto creará la carpeta física en el servidor y su base de datos.</small>
+                    </div>
+
                     <div class="form-group">
                         <label for="comp-empres">Razón Social de la Empresa</label>
                         <input type="text" id="comp-empres" placeholder="Ej: Mi Empresa Limitada" required>
                     </div>
-                    <div class="form-group">
-                        <label for="comp-rolemp">RUT Empresa (Rol Único Tributario)</label>
-                        <input type="text" id="comp-rolemp" placeholder="Ej: 77.666.555-4" required>
+
+                    <div class="grid-form-two-cols">
+                        <div class="form-group">
+                            <label for="comp-rolemp">RUT Empresa (Rol Único Tributario)</label>
+                            <input type="text" id="comp-rolemp" placeholder="Ej: 77.666.555-4" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="comp-giro">Giro Comercial</label>
+                            <input type="text" id="comp-giro" placeholder="Ej: Servicios de Limpieza">
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="comp-giro">Giro Comercial</label>
-                        <input type="text" id="comp-giro" placeholder="Ej: Servicios de Limpieza y Construcción">
-                    </div>
-                    
+
                     <div class="grid-form-two-cols">
                         <div class="form-group">
                             <label for="comp-direcc">Dirección Principal</label>
@@ -450,7 +583,18 @@
                             <input type="text" id="comp-comuna" placeholder="Ej: Santiago">
                         </div>
                     </div>
-                    
+
+                    <div class="grid-form-two-cols">
+                        <div class="form-group">
+                            <label for="comp-tel">Teléfono Empresa</label>
+                            <input type="text" id="comp-tel" placeholder="Ej: +56 2 2345 6789">
+                        </div>
+                        <div class="form-group">
+                            <label for="comp-email">Email Empresa</label>
+                            <input type="email" id="comp-email" placeholder="Ej: contacto@miempresa.cl">
+                        </div>
+                    </div>
+
                     <div class="grid-form-two-cols">
                         <div class="form-group">
                             <label for="comp-repres">Nombre del Representante Legal</label>
@@ -462,13 +606,40 @@
                         </div>
                     </div>
 
+                    <div class="grid-form-two-cols">
+                        <div class="form-group">
+                            <label for="comp-mutualidad">Mutualidad (Seguro Accidentes)</label>
+                            <select id="comp-mutualidad" class="premium-select">
+                                <option value="ISL">ISL (Instituto Seguridad Laboral)</option>
+                                <option value="ACHS">ACHS</option>
+                                <option value="IST">IST</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="comp-banco">Banco para Pago de Remuneraciones</label>
+                            <select id="comp-banco" class="premium-select">
+                                <option value="">Sin banco definido</option>
+                                <option value="BancoEstado">BancoEstado</option>
+                                <option value="BancoChile">Banco de Chile</option>
+                                <option value="Santander">Santander</option>
+                                <option value="BCI">BCI</option>
+                                <option value="Scotiabank">Scotiabank</option>
+                                <option value="BICE">BICE</option>
+                                <option value="Itau">Itaú</option>
+                                <option value="Security">Banco Security</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <button type="submit" class="btn btn-primary" id="btn-save-company">Registrar Empresa</button>
                 </form>
             </div>
         </div>
     </div>
 
-    <!-- Modal: Add / Edit Worker -->
+    <!-- ════════════════════════════════════
+         MODAL: Agregar / Editar Trabajador
+    ════════════════════════════════════ -->
     <div id="worker-form-modal" class="modal-overlay">
         <div class="modal-card max-width-600">
             <div class="modal-header">
@@ -477,8 +648,8 @@
             </div>
             <div class="modal-body">
                 <form id="worker-form" onsubmit="saveWorker(event)" class="premium-form">
-                    <input type="hidden" id="worker-mode" value="add"> <!-- add or edit -->
-                    
+                    <input type="hidden" id="worker-mode" value="add">
+
                     <div class="grid-form-two-cols">
                         <div class="form-group" id="group-worker-rut">
                             <label for="work-rut">RUT Trabajador (RUN)</label>
@@ -498,7 +669,7 @@
                         <label for="work-nombre">Nombres</label>
                         <input type="text" id="work-nombre" placeholder="Ej: Juan Andrés" required>
                     </div>
-                    
+
                     <div class="grid-form-two-cols">
                         <div class="form-group">
                             <label for="work-paterno">Apellido Paterno</label>
@@ -512,20 +683,47 @@
 
                     <div class="grid-form-two-cols">
                         <div class="form-group">
-                            <label for="work-ocupac">Cargo u Ocupación</label>
-                            <input type="text" id="work-ocupac" placeholder="Ej: Auxiliar de Aseo">
+                            <label for="work-fecnac">Fecha de Nacimiento</label>
+                            <input type="date" id="work-fecnac">
                         </div>
                         <div class="form-group">
-                            <label for="work-sbase">Sueldo Base Mensual (CLP)</label>
-                            <input type="text" id="work-sbase" placeholder="Ej: 460000" required>
+                            <label for="work-fecingre">Fecha de Ingreso</label>
+                            <input type="date" id="work-fecingre">
                         </div>
                     </div>
 
                     <div class="grid-form-two-cols">
                         <div class="form-group">
-                            <label for="work-afp">Administradora de Pensión (AFP)</label>
+                            <label for="work-ocupac">Cargo u Ocupación</label>
+                            <input type="text" id="work-ocupac" placeholder="Ej: Auxiliar de Aseo">
+                        </div>
+                        <div class="form-group">
+                            <label for="work-depart">Centro de Costo / Departamento</label>
+                            <input type="text" id="work-depart" placeholder="Ej: Operaciones">
+                        </div>
+                    </div>
+
+                    <div class="grid-form-two-cols">
+                        <div class="form-group">
+                            <label for="work-tipocontrato">Tipo de Contrato</label>
+                            <select id="work-tipocontrato" class="premium-select">
+                                <option value="Indefinido">Indefinido</option>
+                                <option value="PlazoFijo">Plazo Fijo</option>
+                                <option value="ObraFaena">Obra o Faena</option>
+                                <option value="Honorarios">Honorarios (Boleta)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="work-sbase">Sueldo Base Mensual (CLP)</label>
+                            <input type="text" id="work-sbase" placeholder="Ej: 500000" required>
+                        </div>
+                    </div>
+
+                    <div class="grid-form-two-cols">
+                        <div class="form-group">
+                            <label for="work-afp">AFP (Previsión)</label>
                             <select id="work-afp" class="premium-select">
-                                <option value="FONASA">SIN AFP (Pensionado / IPS)</option>
+                                <option value="SIN AFP">SIN AFP (Pensionado / IPS)</option>
                                 <option value="Habitat">Habitat</option>
                                 <option value="Provida">Provida</option>
                                 <option value="Capital">Capital</option>
@@ -536,7 +734,7 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="work-isa">Previsión de Salud (Isapre/FONASA)</label>
+                            <label for="work-isa">Previsión de Salud</label>
                             <select id="work-isa" class="premium-select">
                                 <option value="Fonasa">FONASA</option>
                                 <option value="Banmédica">Banmédica</option>
@@ -549,6 +747,17 @@
                         </div>
                     </div>
 
+                    <div class="grid-form-two-cols">
+                        <div class="form-group">
+                            <label for="work-telefono">Teléfono</label>
+                            <input type="text" id="work-telefono" placeholder="Ej: +56 9 9123 4567">
+                        </div>
+                        <div class="form-group">
+                            <label for="work-email">Correo Electrónico</label>
+                            <input type="text" id="work-email" placeholder="Ej: juan.perez@gmail.com">
+                        </div>
+                    </div>
+
                     <div class="form-group">
                         <label for="work-direcc">Dirección Particular</label>
                         <input type="text" id="work-direcc" placeholder="Ej: Pasaje Las Lilas 450, Antofagasta">
@@ -556,12 +765,31 @@
 
                     <div class="grid-form-two-cols">
                         <div class="form-group">
-                            <label for="work-email">Correo Electrónico</label>
-                            <input type="text" id="work-email" placeholder="Ej: juan.perez@gmail.com">
+                            <label for="work-banco">Banco para Pago</label>
+                            <select id="work-banco" class="premium-select">
+                                <option value="">Sin banco definido</option>
+                                <option value="BancoEstado">BancoEstado</option>
+                                <option value="BancoChile">Banco de Chile</option>
+                                <option value="Santander">Santander</option>
+                                <option value="BCI">BCI</option>
+                                <option value="Scotiabank">Scotiabank</option>
+                                <option value="Itau">Itaú</option>
+                            </select>
                         </div>
+                        <div class="form-group">
+                            <label for="work-cuentabanco">N° Cuenta Bancaria</label>
+                            <input type="text" id="work-cuentabanco" placeholder="Ej: 00-123-45678-90">
+                        </div>
+                    </div>
+
+                    <div class="grid-form-two-cols">
                         <div class="form-group">
                             <label for="work-nacionalidad">Nacionalidad</label>
                             <input type="text" id="work-nacionalidad" placeholder="Ej: CHILENA" value="CHILENA">
+                        </div>
+                        <div class="form-group">
+                            <label for="work-cargas">N° Cargas Familiares</label>
+                            <input type="number" id="work-cargas" placeholder="0" value="0" min="0">
                         </div>
                     </div>
 

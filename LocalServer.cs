@@ -104,7 +104,8 @@ namespace LocalServer
                 urlPath = "/index.html";
             }
 
-            string filePath = Path.Combine(Path.Combine(BasePath, "LocalServer"), "wwwroot" + urlPath.Replace("/", Path.DirectorySeparatorChar.ToString()));
+            string cleanUrlPath = urlPath.Replace("/", Path.DirectorySeparatorChar.ToString()).TrimStart(Path.DirectorySeparatorChar);
+            string filePath = Path.Combine(Path.Combine(BasePath, "LocalServer"), cleanUrlPath);
 
             if (File.Exists(filePath))
             {
@@ -176,7 +177,8 @@ namespace LocalServer
                             try
                             {
                                 conn.Open();
-                                using (OleDbCommand cmd = new OleDbCommand("SELECT * FROM [Empresa]", conn))
+                                EnsureEmpresaColumns(conn);
+                                using (OleDbCommand cmd = new OleDbCommand("SELECT Empres, RolEmp, Direcc, Comuna, Ciudad, GiroCo, Repres, RolRep, Telefo AS TelEmp, EmailEmp, Mutualidad, Banco, LogoBase64 FROM [Empresa]", conn))
                                 using (OleDbDataReader reader = cmd.ExecuteReader())
                                 {
                                     if (reader.Read())
@@ -213,6 +215,11 @@ namespace LocalServer
                 string giro = request.QueryString["giro"];
                 string repres = request.QueryString["repres"];
                 string rolrep = request.QueryString["rolrep"];
+                string tel = request.QueryString["tel"];
+                string email = request.QueryString["email"];
+                string mutualidad = request.QueryString["mutualidad"];
+                string banco = request.QueryString["banco"];
+                string logo = request.QueryString["logo"];
 
                 if (string.IsNullOrEmpty(dirname) || string.IsNullOrEmpty(empres))
                 {
@@ -249,8 +256,9 @@ namespace LocalServer
                     using (OleDbConnection conn = new OleDbConnection(connStr))
                     {
                         conn.Open();
+                        EnsureEmpresaColumns(conn);
                         // Try updating first
-                        using (OleDbCommand cmd = new OleDbCommand("UPDATE [Empresa] SET Empres = ?, RolEmp = ?, Direcc = ?, Comuna = ?, Ciudad = ?, GiroCo = ?, Repres = ?, RolRep = ?", conn))
+                        using (OleDbCommand cmd = new OleDbCommand("UPDATE [Empresa] SET Empres = ?, RolEmp = ?, Direcc = ?, Comuna = ?, Ciudad = ?, GiroCo = ?, Repres = ?, RolRep = ?, Telefo = ?, EmailEmp = ?, Mutualidad = ?, Banco = ?, LogoBase64 = ?", conn))
                         {
                             cmd.Parameters.AddWithValue("Empres", empres ?? "-");
                             cmd.Parameters.AddWithValue("RolEmp", rolemp ?? "00000000-0");
@@ -260,12 +268,17 @@ namespace LocalServer
                             cmd.Parameters.AddWithValue("GiroCo", giro ?? "-");
                             cmd.Parameters.AddWithValue("Repres", repres ?? "-");
                             cmd.Parameters.AddWithValue("RolRep", rolrep ?? "-");
+                            cmd.Parameters.AddWithValue("Telefo", tel ?? "-");
+                            cmd.Parameters.AddWithValue("EmailEmp", email ?? "-");
+                            cmd.Parameters.AddWithValue("Mutualidad", mutualidad ?? "ISL");
+                            cmd.Parameters.AddWithValue("Banco", banco ?? "-");
+                            cmd.Parameters.AddWithValue("LogoBase64", logo ?? "");
 
                             int affected = cmd.ExecuteNonQuery();
                             if (affected == 0)
                             {
                                 // If no rows exist, insert one
-                                using (OleDbCommand cmdInsert = new OleDbCommand("INSERT INTO [Empresa] (Empres, RolEmp, Direcc, Comuna, Ciudad, GiroCo, Repres, RolRep) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", conn))
+                                using (OleDbCommand cmdInsert = new OleDbCommand("INSERT INTO [Empresa] (Empres, RolEmp, Direcc, Comuna, Ciudad, GiroCo, Repres, RolRep, Telefo, EmailEmp, Mutualidad, Banco, LogoBase64) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", conn))
                                 {
                                     cmdInsert.Parameters.AddWithValue("Empres", empres ?? "-");
                                     cmdInsert.Parameters.AddWithValue("RolEmp", rolemp ?? "00000000-0");
@@ -275,6 +288,11 @@ namespace LocalServer
                                     cmdInsert.Parameters.AddWithValue("GiroCo", giro ?? "-");
                                     cmdInsert.Parameters.AddWithValue("Repres", repres ?? "-");
                                     cmdInsert.Parameters.AddWithValue("RolRep", rolrep ?? "-");
+                                    cmdInsert.Parameters.AddWithValue("Telefo", tel ?? "-");
+                                    cmdInsert.Parameters.AddWithValue("EmailEmp", email ?? "-");
+                                    cmdInsert.Parameters.AddWithValue("Mutualidad", mutualidad ?? "ISL");
+                                    cmdInsert.Parameters.AddWithValue("Banco", banco ?? "-");
+                                    cmdInsert.Parameters.AddWithValue("LogoBase64", logo ?? "");
                                     cmdInsert.ExecuteNonQuery();
                                 }
                             }
@@ -303,6 +321,11 @@ namespace LocalServer
                 string giro = request.QueryString["giro"];
                 string repres = request.QueryString["repres"];
                 string rolrep = request.QueryString["rolrep"];
+                string tel = request.QueryString["tel"];
+                string email = request.QueryString["email"];
+                string mutualidad = request.QueryString["mutualidad"];
+                string banco = request.QueryString["banco"];
+                string logo = request.QueryString["logo"];
 
                 if (string.IsNullOrEmpty(dirname))
                 {
@@ -323,7 +346,8 @@ namespace LocalServer
                     using (OleDbConnection conn = new OleDbConnection(connStr))
                     {
                         conn.Open();
-                        using (OleDbCommand cmd = new OleDbCommand("UPDATE [Empresa] SET Empres = ?, RolEmp = ?, Direcc = ?, Comuna = ?, Ciudad = ?, GiroCo = ?, Repres = ?, RolRep = ?", conn))
+                        EnsureEmpresaColumns(conn);
+                        using (OleDbCommand cmd = new OleDbCommand("UPDATE [Empresa] SET Empres = ?, RolEmp = ?, Direcc = ?, Comuna = ?, Ciudad = ?, GiroCo = ?, Repres = ?, RolRep = ?, Telefo = ?, EmailEmp = ?, Mutualidad = ?, Banco = ?, LogoBase64 = ?", conn))
                         {
                             cmd.Parameters.AddWithValue("Empres", empres ?? "-");
                             cmd.Parameters.AddWithValue("RolEmp", rolemp ?? "-");
@@ -333,6 +357,11 @@ namespace LocalServer
                             cmd.Parameters.AddWithValue("GiroCo", giro ?? "-");
                             cmd.Parameters.AddWithValue("Repres", repres ?? "-");
                             cmd.Parameters.AddWithValue("RolRep", rolrep ?? "-");
+                            cmd.Parameters.AddWithValue("Telefo", tel ?? "-");
+                            cmd.Parameters.AddWithValue("EmailEmp", email ?? "-");
+                            cmd.Parameters.AddWithValue("Mutualidad", mutualidad ?? "ISL");
+                            cmd.Parameters.AddWithValue("Banco", banco ?? "-");
+                            cmd.Parameters.AddWithValue("LogoBase64", logo ?? "");
 
                             int affected = cmd.ExecuteNonQuery();
                             SendJson(response, string.Format("{{\"success\":true,\"affected\":{0}}}", affected));
@@ -364,7 +393,7 @@ namespace LocalServer
                 using (OleDbConnection conn = new OleDbConnection(connStr))
                 {
                     conn.Open();
-                    using (OleDbCommand cmd = new OleDbCommand("SELECT Ocupac, Depart, Cuenta, Nombre, RolUni, FechaN, SexoPe, Direcc, SBaseM, AFPper, ISAper, Paterno, Materno, Nacionalidad, Finiquito, EMail FROM [Personal] WHERE Finiquito = False OR Finiquito IS NULL", conn))
+                    using (OleDbCommand cmd = new OleDbCommand("SELECT Ocupac, Depart, Cuenta AS CuentaBanco, Nombre, RolUni, FechaN AS FecNac, SexoPe, Direcc, SBaseM, AFPper, ISAper, Paterno, Materno, Nacionalidad, Finiquito, EMail, FInici AS FecIngre, TipoContra AS TipoContrato, TelFax AS Telefono, Banco, CargaN AS Cargas FROM [Personal] WHERE Finiquito = False OR Finiquito IS NULL", conn))
                     using (OleDbDataReader reader = cmd.ExecuteReader())
                     {
                         string json = ReaderToJsonArray(reader);
@@ -387,6 +416,14 @@ namespace LocalServer
                 string nacionalidad = request.QueryString["nacionalidad"];
                 string direcc = request.QueryString["direcc"];
                 string sexo = request.QueryString["sexo"];
+                string fecnac = request.QueryString["fecnac"];
+                string fecingre = request.QueryString["fecingre"];
+                string depart = request.QueryString["depart"];
+                string tipocontrato = request.QueryString["tipocontrato"];
+                string telefono = request.QueryString["telefono"];
+                string banco = request.QueryString["banco"];
+                string cuentabanco = request.QueryString["cuentabanco"];
+                string cargas = request.QueryString["cargas"];
 
                 if (string.IsNullOrEmpty(empresa) || string.IsNullOrEmpty(rut) || string.IsNullOrEmpty(nombre) || string.IsNullOrEmpty(paterno))
                 {
@@ -407,7 +444,7 @@ namespace LocalServer
                     using (OleDbConnection conn = new OleDbConnection(connStr))
                     {
                         conn.Open();
-                        using (OleDbCommand cmd = new OleDbCommand("INSERT INTO [Personal] (RolUni, Nombre, Paterno, Materno, Ocupac, SBaseM, AFPper, ISAper, EMail, Nacionalidad, Direcc, SexoPe, Finiquito) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, False)", conn))
+                        using (OleDbCommand cmd = new OleDbCommand("INSERT INTO [Personal] (RolUni, Nombre, Paterno, Materno, Ocupac, SBaseM, AFPper, ISAper, EMail, Nacionalidad, Direcc, SexoPe, FechaN, FInici, Depart, TipoContra, TelFax, Banco, Cuenta, CargaN, Finiquito) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, False)", conn))
                         {
                             cmd.Parameters.AddWithValue("RolUni", rut);
                             cmd.Parameters.AddWithValue("Nombre", nombre);
@@ -421,6 +458,14 @@ namespace LocalServer
                             cmd.Parameters.AddWithValue("Nacionalidad", nacionalidad ?? "CHILENA");
                             cmd.Parameters.AddWithValue("Direcc", direcc ?? "-");
                             cmd.Parameters.AddWithValue("SexoPe", sexo ?? "Masculino");
+                            cmd.Parameters.AddWithValue("FechaN", fecnac ?? "-");
+                            cmd.Parameters.AddWithValue("FInici", fecingre ?? "-");
+                            cmd.Parameters.AddWithValue("Depart", depart ?? "-");
+                            cmd.Parameters.AddWithValue("TipoContra", tipocontrato ?? "Indefinido");
+                            cmd.Parameters.AddWithValue("TelFax", telefono ?? "-");
+                            cmd.Parameters.AddWithValue("Banco", banco ?? "-");
+                            cmd.Parameters.AddWithValue("Cuenta", cuentabanco ?? "-");
+                            cmd.Parameters.AddWithValue("CargaN", cargas ?? "0");
 
                             int affected = cmd.ExecuteNonQuery();
                             SendJson(response, string.Format("{{\"success\":true,\"affected\":{0}}}", affected));
@@ -447,6 +492,14 @@ namespace LocalServer
                 string nacionalidad = request.QueryString["nacionalidad"];
                 string direcc = request.QueryString["direcc"];
                 string sexo = request.QueryString["sexo"];
+                string fecnac = request.QueryString["fecnac"];
+                string fecingre = request.QueryString["fecingre"];
+                string depart = request.QueryString["depart"];
+                string tipocontrato = request.QueryString["tipocontrato"];
+                string telefono = request.QueryString["telefono"];
+                string banco = request.QueryString["banco"];
+                string cuentabanco = request.QueryString["cuentabanco"];
+                string cargas = request.QueryString["cargas"];
 
                 if (string.IsNullOrEmpty(empresa) || string.IsNullOrEmpty(rut))
                 {
@@ -467,7 +520,7 @@ namespace LocalServer
                     using (OleDbConnection conn = new OleDbConnection(connStr))
                     {
                         conn.Open();
-                        using (OleDbCommand cmd = new OleDbCommand("UPDATE [Personal] SET Nombre = ?, Paterno = ?, Materno = ?, Ocupac = ?, SBaseM = ?, AFPper = ?, ISAper = ?, EMail = ?, Nacionalidad = ?, Direcc = ?, SexoPe = ? WHERE RolUni = ?", conn))
+                        using (OleDbCommand cmd = new OleDbCommand("UPDATE [Personal] SET Nombre = ?, Paterno = ?, Materno = ?, Ocupac = ?, SBaseM = ?, AFPper = ?, ISAper = ?, EMail = ?, Nacionalidad = ?, Direcc = ?, SexoPe = ?, FechaN = ?, FInici = ?, Depart = ?, TipoContra = ?, TelFax = ?, Banco = ?, Cuenta = ?, CargaN = ? WHERE RolUni = ?", conn))
                         {
                             cmd.Parameters.AddWithValue("Nombre", nombre);
                             cmd.Parameters.AddWithValue("Paterno", paterno);
@@ -480,6 +533,14 @@ namespace LocalServer
                             cmd.Parameters.AddWithValue("Nacionalidad", nacionalidad ?? "CHILENA");
                             cmd.Parameters.AddWithValue("Direcc", direcc ?? "-");
                             cmd.Parameters.AddWithValue("SexoPe", sexo ?? "Masculino");
+                            cmd.Parameters.AddWithValue("FechaN", fecnac ?? "-");
+                            cmd.Parameters.AddWithValue("FInici", fecingre ?? "-");
+                            cmd.Parameters.AddWithValue("Depart", depart ?? "-");
+                            cmd.Parameters.AddWithValue("TipoContra", tipocontrato ?? "Indefinido");
+                            cmd.Parameters.AddWithValue("TelFax", telefono ?? "-");
+                            cmd.Parameters.AddWithValue("Banco", banco ?? "-");
+                            cmd.Parameters.AddWithValue("Cuenta", cuentabanco ?? "-");
+                            cmd.Parameters.AddWithValue("CargaN", cargas ?? "0");
                             cmd.Parameters.AddWithValue("RolUni", rut);
 
                             int affected = cmd.ExecuteNonQuery();
@@ -694,6 +755,49 @@ namespace LocalServer
             response.StatusCode = (int)HttpStatusCode.InternalServerError;
             string errJson = string.Format("{{\"error\":\"{0}\"}}", EscapeJson(message));
             SendJson(response, errJson);
+        }
+
+        private static void EnsureEmpresaColumns(OleDbConnection conn)
+        {
+            try
+            {
+                var schema = conn.GetSchema("Columns", new string[] { null, null, "Empresa" });
+                List<string> existingCols = new List<string>();
+                foreach (System.Data.DataRow row in schema.Rows)
+                {
+                    existingCols.Add(row["COLUMN_NAME"].ToString().ToLower());
+                }
+
+                string[] colsToAdd = new string[] {
+                    "EmailEmp TEXT(255)",
+                    "Mutualidad TEXT(100)",
+                    "LogoBase64 MEMO"
+                };
+
+                foreach (string colDef in colsToAdd)
+                {
+                    string colName = colDef.Split(' ')[0].ToLower();
+                    if (!existingCols.Contains(colName))
+                    {
+                        try
+                        {
+                            using (OleDbCommand alterCmd = new OleDbCommand("ALTER TABLE [Empresa] ADD COLUMN " + colDef, conn))
+                            {
+                                alterCmd.ExecuteNonQuery();
+                                Console.WriteLine("Columna agregada a Empresa: " + colDef);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine("Error al agregar columna " + colDef + ": " + ex.Message);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error en EnsureEmpresaColumns: " + ex.Message);
+            }
         }
 
         public static string RowToJson(OleDbDataReader reader)
