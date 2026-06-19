@@ -510,7 +510,7 @@ function renderWorkers(filterText = "") {
     const filtered = companyWorkers.filter(w => {
         if (!filterText) return true;
         const text     = filterText.toLowerCase();
-        const fullname = `${w.Nombre||''} ${w.Paterno||''} ${w.Materno||}`.toLowerCase();
+        const fullname = `${w.Nombre||''} ${w.Paterno||''} ${w.Materno||''}`.toLowerCase();
         return (w.RolUni && w.RolUni.toLowerCase().includes(text)) ||
                fullname.includes(text) ||
                (w.Ocupac && w.Ocupac.toLowerCase().includes(text));
