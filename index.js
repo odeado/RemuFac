@@ -56,6 +56,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 async function initApp() {
     applyModeUI();
+    await loadBrandingConfig();
 
     if (appMode === "local") {
         // Local mode: bypass login immediately
@@ -96,6 +97,7 @@ function setUserDisplay(name, role, avatarText) {
 }
 
 async function loadAllData() {
+    await loadBrandingConfig();
     await loadCompanies();
     loadUsers();
     loadParams();
@@ -1369,4 +1371,127 @@ function formatDate(dateStr) {
         if (!isNaN(d)) return d.toLocaleDateString("es-CL");
     } catch(e) { }
     return dateStr;
+}
+
+// ── Branding Configuration ────────────────────────────────
+let appBranding = {
+    appName: "RemuGest",
+    logoEmoji: "📊",
+    logoBase64: ""
+};
+
+async function loadBrandingConfig() {
+    try {
+        if (appMode === "local") {
+            const localConf = localStorage.getItem("appBranding");
+            if (localConf) {
+                appBranding = JSON.parse(localConf);
+            }
+        } else {
+            // Load from Firestore
+            const doc = await db.collection("config").doc("branding").get();
+            if (doc.exists) {
+                appBranding = doc.data();
+            } else {
+                // Fallback to local storage or defaults
+                const localConf = localStorage.getItem("appBranding");
+                if (localConf) appBranding = JSON.parse(localConf);
+            }
+        }
+    } catch (e) {
+        console.error("Error loading branding config:", e);
+    }
+    applyBrandingConfig();
+    populateBrandingForm();
+}
+
+function applyBrandingConfig() {
+    // 1. Title tag
+    document.title = (appBranding.appName || "RemuGest") + " - Portal de Remuneraciones";
+
+    // 2. Sidebar name (supports HTML formatting)
+    const nameEl = document.getElementById("app-sidebar-name");
+    if (nameEl) {
+        nameEl.innerHTML = appBranding.appName || "RemuGest";
+    }
+
+    // 3. Sidebar logo
+    const logoEl = document.getElementById("app-sidebar-logo");
+    if (logoEl) {
+        // Reset classes
+        logoEl.className = "logo-icon";
+        if (appBranding.logoBase64) {
+            logoEl.classList.add("has-image");
+            logoEl.innerHTML = `<img src="${appBranding.logoBase64}" alt="App Logo">`;
+        } else if (appBranding.logoEmoji) {
+            logoEl.classList.add("has-emoji");
+            logoEl.innerHTML = appBranding.logoEmoji;
+        } else {
+            logoEl.innerHTML = "";
+        }
+    }
+}
+
+function populateBrandingForm() {
+    const nameInput = document.getElementById("brand-name");
+    const emojiInput = document.getElementById("brand-logo-emoji");
+    const base64Input = document.getElementById("brand-logo-base64");
+    const previewEl = document.getElementById("brand-logo-preview");
+
+    if (nameInput) nameInput.value = appBranding.appName || "";
+    if (emojiInput) emojiInput.value = appBranding.logoEmoji || "";
+    if (base64Input) base64Input.value = appBranding.logoBase64 || "";
+    
+    if (previewEl) {
+        if (appBranding.logoBase64) {
+            previewEl.innerHTML = `<img src="${appBranding.logoBase64}" alt="Preview" style="width:100%;height:100%;object-fit:cover;">`;
+        } else {
+            previewEl.innerHTML = appBranding.logoEmoji || "📊";
+        }
+    }
+}
+
+function handleBrandLogoUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (file.size > 200 * 1024) {
+        alert("El logo del sistema no debe superar los 200KB (usa una imagen pequeña para mantener velocidad).");
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const base64 = e.target.result;
+        document.getElementById("brand-logo-base64").value = base64;
+        document.getElementById("brand-logo-emoji").value = ""; // clear emoji when uploading image
+        
+        const previewEl = document.getElementById("brand-logo-preview");
+        if (previewEl) {
+            previewEl.innerHTML = `<img src="${base64}" alt="Preview" style="width:100%;height:100%;object-fit:cover;">`;
+        }
+    };
+    reader.readAsDataURL(file);
+}
+
+async function saveBranding(event) {
+    event.preventDefault();
+    const appName = document.getElementById("brand-name").value.trim();
+    const logoEmoji = document.getElementById("brand-logo-emoji").value.trim();
+    const logoBase64 = document.getElementById("brand-logo-base64").value;
+
+    appBranding = { appName, logoEmoji, logoBase64 };
+
+    try {
+        localStorage.setItem("appBranding", JSON.stringify(appBranding));
+        
+        if (appMode === "cloud") {
+            await db.collection("config").doc("branding").set(appBranding);
+        }
+        
+        applyBrandingConfig();
+        alert("🎉 ¡Personalización de la aplicación guardada correctamente!");
+    } catch (e) {
+        alert("Error al guardar personalización: " + e.message);
+    }
 }
