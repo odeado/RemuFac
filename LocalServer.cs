@@ -151,6 +151,12 @@ namespace LocalServer
             string path = request.Url.AbsolutePath;
             response.ContentType = "application/json; charset=utf-8";
 
+            Dictionary<string, string> postData = null;
+            if (request.HttpMethod == "POST")
+            {
+                postData = ParsePostBody(request);
+            }
+
             if (path == "/api/empresas")
             {
                 string empresasFile = Path.Combine(RemuPath, "Empresas.txt");
@@ -206,20 +212,20 @@ namespace LocalServer
             }
             else if (path == "/api/empresas/add")
             {
-                string dirname = request.QueryString["dirname"];
-                string empres = request.QueryString["empres"];
-                string rolemp = request.QueryString["rolemp"];
-                string direcc = request.QueryString["direcc"];
-                string comuna = request.QueryString["comuna"];
-                string ciudad = request.QueryString["ciudad"];
-                string giro = request.QueryString["giro"];
-                string repres = request.QueryString["repres"];
-                string rolrep = request.QueryString["rolrep"];
-                string tel = request.QueryString["tel"];
-                string email = request.QueryString["email"];
-                string mutualidad = request.QueryString["mutualidad"];
-                string banco = request.QueryString["banco"];
-                string logo = request.QueryString["logo"];
+                string dirname = GetParam(request, postData, "dirname");
+                string empres = GetParam(request, postData, "empres");
+                string rolemp = GetParam(request, postData, "rolemp");
+                string direcc = GetParam(request, postData, "direcc");
+                string comuna = GetParam(request, postData, "comuna");
+                string ciudad = GetParam(request, postData, "ciudad");
+                string giro = GetParam(request, postData, "giro");
+                string repres = GetParam(request, postData, "repres");
+                string rolrep = GetParam(request, postData, "rolrep");
+                string tel = GetParam(request, postData, "tel");
+                string email = GetParam(request, postData, "email");
+                string mutualidad = GetParam(request, postData, "mutualidad");
+                string banco = GetParam(request, postData, "banco");
+                string logo = GetParam(request, postData, "logo");
 
                 if (string.IsNullOrEmpty(dirname) || string.IsNullOrEmpty(empres))
                 {
@@ -312,20 +318,20 @@ namespace LocalServer
             }
             else if (path == "/api/empresas/update")
             {
-                string dirname = request.QueryString["dirname"];
-                string empres = request.QueryString["empres"];
-                string rolemp = request.QueryString["rolemp"];
-                string direcc = request.QueryString["direcc"];
-                string comuna = request.QueryString["comuna"];
-                string ciudad = request.QueryString["ciudad"];
-                string giro = request.QueryString["giro"];
-                string repres = request.QueryString["repres"];
-                string rolrep = request.QueryString["rolrep"];
-                string tel = request.QueryString["tel"];
-                string email = request.QueryString["email"];
-                string mutualidad = request.QueryString["mutualidad"];
-                string banco = request.QueryString["banco"];
-                string logo = request.QueryString["logo"];
+                string dirname = GetParam(request, postData, "dirname");
+                string empres = GetParam(request, postData, "empres");
+                string rolemp = GetParam(request, postData, "rolemp");
+                string direcc = GetParam(request, postData, "direcc");
+                string comuna = GetParam(request, postData, "comuna");
+                string ciudad = GetParam(request, postData, "ciudad");
+                string giro = GetParam(request, postData, "giro");
+                string repres = GetParam(request, postData, "repres");
+                string rolrep = GetParam(request, postData, "rolrep");
+                string tel = GetParam(request, postData, "tel");
+                string email = GetParam(request, postData, "email");
+                string mutualidad = GetParam(request, postData, "mutualidad");
+                string banco = GetParam(request, postData, "banco");
+                string logo = GetParam(request, postData, "logo");
 
                 if (string.IsNullOrEmpty(dirname))
                 {
@@ -755,6 +761,41 @@ namespace LocalServer
             response.StatusCode = (int)HttpStatusCode.InternalServerError;
             string errJson = string.Format("{{\"error\":\"{0}\"}}", EscapeJson(message));
             SendJson(response, errJson);
+        }
+
+        private static Dictionary<string, string> ParsePostBody(HttpListenerRequest request)
+        {
+            var dict = new Dictionary<string, string>();
+            if (!request.HasEntityBody) return dict;
+            try
+            {
+                using (var reader = new StreamReader(request.InputStream, request.ContentEncoding ?? Encoding.UTF8))
+                {
+                    string body = reader.ReadToEnd();
+                    string[] pairs = body.Split('&');
+                    foreach (string pair in pairs)
+                    {
+                        string[] parts = pair.Split('=');
+                        if (parts.Length == 2)
+                        {
+                            string key = Uri.UnescapeDataString(parts[0]);
+                            string val = Uri.UnescapeDataString(parts[1].Replace("+", " "));
+                            dict[key] = val;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error al parsear POST body: " + ex.Message);
+            }
+            return dict;
+        }
+
+        private static string GetParam(HttpListenerRequest request, Dictionary<string, string> postData, string key)
+        {
+            if (postData != null && postData.ContainsKey(key)) return postData[key];
+            return request.QueryString[key];
         }
 
         private static void EnsureEmpresaColumns(OleDbConnection conn)

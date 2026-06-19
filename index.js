@@ -415,8 +415,12 @@ async function saveCompany(event) {
                 dirname, empres, rolemp, giro, direcc, comuna, repres, rolrep,
                 tel, email, mutualidad, banco, logo
             });
-            const url = `${API_BASE}/api/empresas/${mode === "add" ? "add" : "update"}?${params}`;
-            const r = await fetch(url);
+            const url = `${API_BASE}/api/empresas/${mode === "add" ? "add" : "update"}`;
+            const r = await fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: params.toString()
+            });
             if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Error servidor"); }
         } else {
             const docRef = db.collection("empresas").doc(dirname || document.getElementById("comp-dirname").value.trim());
