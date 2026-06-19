@@ -717,8 +717,8 @@ namespace LocalServer
                 using (OleDbConnection conn = new OleDbConnection(connStr))
                 {
                     conn.Open();
-                    // Load global parameters
-                    using (OleDbCommand cmd = new OleDbCommand("SELECT * FROM [NT_Parametro]", conn))
+                    // Load global parameters joined with their type descriptions
+                    using (OleDbCommand cmd = new OleDbCommand("SELECT P.Id_Parametro, T.TipDescripcion AS CodParametro, P.ValorParametro AS ValParametro, 'Periodo: ' & P.MesParametro & '/' & P.AnioParametro AS DesParametro FROM [NT_Parametro] P INNER JOIN [NT_TipoParametro] T ON P.TipParametro = T.TipParametro ORDER BY P.Id_Parametro DESC", conn))
                     using (OleDbDataReader reader = cmd.ExecuteReader())
                     {
                         string json = ReaderToJsonArray(reader);
