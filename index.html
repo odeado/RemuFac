@@ -441,6 +441,40 @@
                                     </div>
                                 </div>
                             </form>
+                    </div>
+
+                    <!-- Database Migration Guide Card -->
+                    <div class="dashboard-card" style="margin-top:20px;">
+                        <div class="card-header">
+                            <h3>📖 Guía Rápida de Migración de Datos</h3>
+                            <p>Sigue estos pasos para mover tus bases de datos antiguas (.mdb) de tu PC local a la Nube (Firebase).</p>
+                        </div>
+                        <div class="card-body">
+                            <div class="migration-guide" style="font-size: 13px; line-height: 1.6; color: var(--text-muted);">
+                                <ol style="padding-left: 20px; display: flex; flex-direction: column; gap: 12px; margin: 0;">
+                                    <li>
+                                        <strong>Estructurar los archivos en tu disco C:</strong>
+                                        <ul style="padding-left: 15px; margin-top: 5px; list-style-type: circle; display: flex; flex-direction: column; gap: 4px;">
+                                            <li>Carpetas de cada empresa: <code>c:\Contabilidad\REMUNERACIONES\Nombre_De_La_Empresa\Wages.Mdb</code></li>
+                                            <li>Listado de empresas: <code>c:\Contabilidad\REMUNERACIONES\Empresas.txt</code> (Nombres de carpetas, uno por línea)</li>
+                                            <li>Base de datos de usuarios: <code>c:\Contabilidad\REMUNERACIONES\Key.mdb</code></li>
+                                            <li>Base de datos global: <code>c:\Contabilidad\NT_Main.mdb</code></li>
+                                        </ul>
+                                    </li>
+                                    <li>
+                                        <strong>Levantar el Servidor Local:</strong>
+                                        Ejecuta <code>LocalServer.exe</code> en la carpeta <code>LocalServer/</code> y entra a <a href="http://localhost:5000" target="_blank" style="color:var(--accent-primary); text-decoration: underline;">http://localhost:5000</a> en Modo Local.
+                                    </li>
+                                    <li>
+                                        <strong>Migrar a la Nube:</strong>
+                                        En el Panel Principal (Dashboard), haz clic en el botón <strong>"☁️ Iniciar Migración a Firebase"</strong> para subir todos tus datos a Firestore en la nube de forma automática.
+                                    </li>
+                                    <li>
+                                        <strong>Cambiar a Modo Nube:</strong>
+                                        Una vez finalizada la barra de progreso, activa el <strong>Modo Nube</strong> abajo en la barra lateral e inicia sesión. ¡Todo estará sincronizado en internet!
+                                    </li>
+                                </ol>
+                            </div>
                         </div>
                     </div>
                 </section>
