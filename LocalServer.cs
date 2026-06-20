@@ -778,8 +778,8 @@ namespace LocalServer
                         string[] parts = pair.Split('=');
                         if (parts.Length == 2)
                         {
-                            string key = Uri.UnescapeDataString(parts[0]);
-                            string val = Uri.UnescapeDataString(parts[1].Replace("+", " "));
+                            string key = WebUtility.UrlDecode(parts[0]);
+                            string val = WebUtility.UrlDecode(parts[1]);
                             dict[key] = val;
                         }
                     }
